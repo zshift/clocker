@@ -21,20 +21,22 @@ enum Commands {
     In,
     #[clap(about = "Clock out")]
     Out,
+    #[clap(about = "Get the raw timesheet")]
+    Raw,
+    #[clap(about = "Get the time worked today, even if you haven't clocked out yet.")]
+    RunningTime,
     #[clap(about = "Get total time clocked (ins and outs paired).")]
     TimeClocked {
         #[clap(subcommand)]
-        clocked: Granularity,
+        granularity: Granularity,
     },
+    #[clap(about = "Prints out the timesheet as a table")]
+    Timesheet,
     #[clap(about = "Watches for the specified number of hours worked this week")]
     Watch {
         #[arg(short, long)]
         hours: usize,
     },
-    #[clap(about = "Get the raw timesheet")]
-    Raw,
-    #[clap(about = "Get the time worked today, even if you haven't clocked out yet.")]
-    RunningTime,
     #[clap(about = "Wipe the timesheet. WARNING: This cannot be undone.")]
     Wipe,
 }
@@ -84,14 +86,17 @@ fn main() -> Result<()> {
         Commands::Out => {
             clock.clock_out()?;
         }
-        Commands::TimeClocked { clocked } => {
-            clock.time_clocked(&clocked.into())?;
+        Commands::TimeClocked { granularity } => {
+            clock.time_clocked(&granularity.into())?;
         }
         Commands::Raw => {
             clock.raw_timesheet()?;
         }
         Commands::RunningTime => {
             clock.running_time()?;
+        }
+        Commands::Timesheet => {
+            clock.timesheet()?;
         }
         Commands::Watch { hours } => {
             clock.watch(hours);

@@ -1,3 +1,4 @@
+use core::time;
 use std::collections::VecDeque;
 
 use chrono::{Datelike, Days, Local, NaiveDate, TimeDelta};
@@ -25,6 +26,12 @@ pub struct Timesheet {
     pub clocks: VecDeque<Action>,
 }
 
+fn closest_prev_monday(date: NaiveDate) -> NaiveDate {
+    let days_so_far = date.weekday().num_days_from_monday();
+    date.checked_sub_days(Days::new(days_so_far as u64))
+        .unwrap()
+}
+
 impl Timesheet {
     /// Returns the total time worked in hours.
     pub fn total_time(&self, worked: &This) -> TimeDelta {
@@ -41,13 +48,8 @@ impl Timesheet {
                     Action::Out(time) => time.date_naive() == today.date_naive(),
                 })
                 .collect(),
-            This::Week => {
-                fn closest_prev_monday(date: NaiveDate) -> NaiveDate {
-                    let days_so_far = date.weekday().num_days_from_monday();
-                    date.checked_sub_days(Days::new(days_so_far as u64))
-                        .unwrap()
-                }
 
+            This::Week => {
                 let monday = closest_prev_monday(today.date_naive());
                 self.clocks
                     .iter()
@@ -57,6 +59,7 @@ impl Timesheet {
                     })
                     .collect()
             }
+
             This::Month => {
                 let start_of_month = today.date_naive().with_day(1).unwrap();
                 self.clocks
@@ -67,6 +70,7 @@ impl Timesheet {
                     })
                     .collect()
             }
+
             This::Year => {
                 let start_of_year = today
                     .date_naive()
@@ -74,6 +78,7 @@ impl Timesheet {
                     .unwrap()
                     .with_day(1)
                     .unwrap();
+
                 self.clocks
                     .iter()
                     .filter(|action| match action {
@@ -98,6 +103,57 @@ impl Timesheet {
         }
 
         total_time
+    }
+
+    pub fn weekly_hours(&self) -> Vec<String> {
+        let now = Local::now();
+        let today = now.date_naive();
+        let one_day = Days::new(1);
+
+        let monday = closest_prev_monday(today);
+        let tuesday = monday.checked_add_days(one_day).unwrap();
+        let wednesday = tuesday.checked_add_days(one_day).unwrap();
+        let thursday = wednesday.checked_add_days(one_day).unwrap();
+        let friday = thursday.checked_add_days(one_day).unwrap();
+        let saturday = friday.checked_add_days(one_day).unwrap();
+        let sunday = saturday.checked_add_days(one_day).unwrap();
+
+        let days = vec![
+            monday, tuesday, wednesday, thursday, friday, saturday, sunday,
+        ];
+
+        let none: Option<&chrono::DateTime<Local>> = None;
+
+        days.iter()
+            .map(|day| {
+                let (time_worked, _) = self
+                    .clocks
+                    .iter()
+                    .filter(|clock| match &clock {
+                        Action::In(time) => time.date_naive() == *day,
+                        Action::Out(time) => time.date_naive() == *day,
+                    })
+                    .fold(
+                        (TimeDelta::zero(), none),
+                        |(mut time_worked, mut last_clock_in), clock| {
+                            match clock {
+                                Action::In(time) => last_clock_in = Some(time),
+                                Action::Out(time) => {
+                                    time_worked +=
+                                        time.signed_duration_since(last_clock_in.unwrap())
+                                }
+                            }
+                            (time_worked, last_clock_in)
+                        },
+                    );
+
+                format!(
+                    "{:02}:{:02}",
+                    time_worked.num_hours(),
+                    time_worked.num_minutes() % 60
+                )
+            })
+            .collect()
     }
 
     // Clocks in.

@@ -1,5 +1,10 @@
+use core::time;
+
 use anyhow::Result;
 use chrono::{Local, TimeDelta};
+use cli_table::{format::Justify, print_stdout, Cell, Color, Style, Table};
+
+use crate::Granularity;
 
 use super::timesheet::*;
 /// Debug mode.
@@ -94,6 +99,51 @@ impl<'a> Timeclock<'a> {
         let timesheet = serde_json::to_string(&timesheet)?;
 
         println!("{}", timesheet);
+        Ok(())
+    }
+
+    pub fn timesheet(&self) -> Result<()> {
+        let timesheet = &self.get_timesheet()?;
+        let weekly_hours = timesheet
+            .weekly_hours()
+            .iter()
+            .map(|hours| hours.cell())
+            .collect::<Vec<_>>();
+        let chart = vec![weekly_hours]
+            .table()
+            .title(vec![
+                "Monday"
+                    .cell()
+                    .bold(true)
+                    .foreground_color(Some(Color::Green)),
+                "Tuesday"
+                    .cell()
+                    .bold(true)
+                    .foreground_color(Some(Color::Green)),
+                "Wednesday"
+                    .cell()
+                    .bold(true)
+                    .foreground_color(Some(Color::Green)),
+                "Thursday"
+                    .cell()
+                    .bold(true)
+                    .foreground_color(Some(Color::Green)),
+                "Friday"
+                    .cell()
+                    .bold(true)
+                    .foreground_color(Some(Color::Green)),
+                "Saturday"
+                    .cell()
+                    .bold(true)
+                    .foreground_color(Some(Color::Yellow)),
+                "Sunday"
+                    .cell()
+                    .bold(true)
+                    .foreground_color(Some(Color::Yellow)),
+            ])
+            .bold(true);
+
+        print_stdout(chart)?;
         Ok(())
     }
 
