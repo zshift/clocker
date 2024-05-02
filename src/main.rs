@@ -18,9 +18,15 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     #[clap(about = "Clock in")]
-    In,
+    In {
+        #[arg(short, long, default_value = None)]
+        at: Option<chrono::NaiveDateTime>,
+    },
     #[clap(about = "Clock out")]
-    Out,
+    Out {
+        #[arg(short, long, default_value = None)]
+        at: Option<chrono::NaiveDateTime>,
+    },
     #[clap(about = "Get the raw timesheet")]
     Raw,
     #[clap(about = "Get the time worked today, even if you haven't clocked out yet.")]
@@ -40,8 +46,8 @@ enum Commands {
         #[arg(short, long)]
         hours: usize,
     },
-    #[clap(about = "Wipe the timesheet. WARNING: This cannot be undone.")]
-    Wipe,
+    #[clap(about = "Returns the path to the timesheet file")]
+    File,
 }
 
 /// Time clocked _this_ period.
@@ -83,30 +89,14 @@ fn main() -> Result<()> {
     );
 
     match &cli.command {
-        Commands::In => {
-            clock.clock_in()?;
-        }
-        Commands::Out => {
-            clock.clock_out()?;
-        }
-        Commands::TimeClocked { granularity } => {
-            clock.time_clocked(&granularity.into())?;
-        }
-        Commands::Raw => {
-            clock.raw_timesheet()?;
-        }
-        Commands::RunningTime => {
-            clock.running_time()?;
-        }
-        Commands::Timesheet { on } => {
-            clock.timesheet(*on)?;
-        }
-        Commands::Watch { hours } => {
-            clock.watch(hours);
-        }
-        Commands::Wipe => {
-            clock.wipe()?;
-        }
+        Commands::In { at } => clock.clock_in(*at)?,
+        Commands::Out { at } => clock.clock_out(*at)?,
+        Commands::TimeClocked { granularity } => clock.time_clocked(&granularity.into())?,
+        Commands::Raw => clock.raw_timesheet()?,
+        Commands::RunningTime => clock.running_time()?,
+        Commands::Timesheet { on } => clock.timesheet(*on)?,
+        Commands::Watch { hours } => clock.watch(hours),
+        Commands::File => clock.print_file(),
     }
 
     Ok(())

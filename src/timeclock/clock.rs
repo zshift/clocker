@@ -46,28 +46,34 @@ impl<'a> Timeclock<'a> {
     }
 
     /// Clocks in the user.
-    pub fn clock_in(&self) -> Result<()> {
+    pub fn clock_in(&self, at: Option<chrono::NaiveDateTime>) -> Result<()> {
         let mut timesheet = self.get_timesheet()?;
 
         if let Some(Action::In(_)) = timesheet.last_action() {
             anyhow::bail!("You are already clocked in");
         }
 
-        timesheet.clock_in(Local::now());
+        let at = at
+            .map(|at| at.and_local_timezone(Local).unwrap())
+            .unwrap_or(Local::now());
+        timesheet.clock_in(at);
         self.save_timesheet(&timesheet)?;
 
         Ok(())
     }
 
     /// Clocks out the user.
-    pub fn clock_out(&self) -> Result<()> {
+    pub fn clock_out(&self, at: Option<chrono::NaiveDateTime>) -> Result<()> {
         let mut timesheet = self.get_timesheet()?;
 
         if let Some(Action::Out(_)) = timesheet.last_action() {
             anyhow::bail!("You are already clocked out");
         }
 
-        timesheet.clock_out(Local::now());
+        let at = at
+            .map(|at| at.and_local_timezone(Local).unwrap())
+            .unwrap_or(Local::now());
+        timesheet.clock_out(at);
         self.save_timesheet(&timesheet)?;
 
         Ok(())
@@ -149,12 +155,8 @@ impl<'a> Timeclock<'a> {
 
     pub fn watch(&self, _hours: &usize) {}
 
-    /// Wipes the timesheet.
-    pub fn wipe(&self) -> Result<()> {
-        //let timesheet = Timesheet::default();
-        //self.save_timesheet(&timesheet)?;
-
-        Ok(())
+    pub fn print_file(&self) {
+        println!("{}", self.timesheet_path.display());
     }
 
     fn get_timesheet(&self) -> Result<Timesheet> {
@@ -209,7 +211,7 @@ mod timeclock_tests {
     fn clock_in() -> Result<()> {
         with_temp(|timesheet_path| {
             let timeclock = Timeclock::new(timesheet_path, Debug::Off);
-            timeclock.clock_in()?;
+            timeclock.clock_in(None)?;
             let timesheet = timeclock.get_timesheet()?;
 
             match timesheet.last_action().unwrap() {
@@ -225,8 +227,8 @@ mod timeclock_tests {
     fn clock_in_twice_fails() -> Result<()> {
         with_temp(|timesheet_path| {
             let timeclock = Timeclock::new(timesheet_path, Debug::Off);
-            timeclock.clock_in()?;
-            let result = timeclock.clock_in();
+            timeclock.clock_in(None)?;
+            let result = timeclock.clock_in(None);
 
             assert!(result.is_err());
 
@@ -238,8 +240,8 @@ mod timeclock_tests {
     fn clock_out() -> Result<()> {
         with_temp(|timesheet_path| {
             let timeclock = Timeclock::new(timesheet_path, Debug::Off);
-            timeclock.clock_in()?;
-            timeclock.clock_out()?;
+            timeclock.clock_in(None)?;
+            timeclock.clock_out(None)?;
             let timesheet = timeclock.get_timesheet()?;
 
             match timesheet.last_action().unwrap() {
@@ -255,8 +257,8 @@ mod timeclock_tests {
     fn clock_out_twice_fails() -> Result<()> {
         with_temp(|timesheet_path| {
             let timeclock = Timeclock::new(timesheet_path, Debug::Off);
-            timeclock.clock_out()?;
-            let result = timeclock.clock_out();
+            timeclock.clock_out(None)?;
+            let result = timeclock.clock_out(None);
 
             assert!(result.is_err());
 
@@ -288,18 +290,4 @@ mod timeclock_tests {
             Ok(())
         })
     }
-
-    // #[test(skip = "Not implemented")]
-    // fn wipe() -> Result<()> {
-    //     with_temp(|timesheet_path| {
-    //         let timeclock = Timeclock::new(timesheet_path, Debug::Off);
-    //         timeclock.clock_in()?;
-    //         timeclock.wipe()?;
-    //         let timesheet = timeclock.get_timesheet()?;
-
-    //         assert!(timesheet.clocks.is_empty());
-
-    //         Ok(())
-    //     })
-    // }
 }
