@@ -31,7 +31,10 @@ enum Commands {
         granularity: Granularity,
     },
     #[clap(about = "Prints out the timesheet as a table")]
-    Timesheet,
+    Timesheet {
+        #[arg(short, long, default_value = None)]
+        on: Option<chrono::NaiveDate>,
+    },
     #[clap(about = "Watches for the specified number of hours worked this week")]
     Watch {
         #[arg(short, long)]
@@ -95,8 +98,8 @@ fn main() -> Result<()> {
         Commands::RunningTime => {
             clock.running_time()?;
         }
-        Commands::Timesheet => {
-            clock.timesheet()?;
+        Commands::Timesheet { on } => {
+            clock.timesheet(*on)?;
         }
         Commands::Watch { hours } => {
             clock.watch(hours);

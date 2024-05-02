@@ -102,10 +102,10 @@ impl<'a> Timeclock<'a> {
         Ok(())
     }
 
-    pub fn timesheet(&self) -> Result<()> {
+    pub fn timesheet(&self, on: Option<chrono::NaiveDate>) -> Result<()> {
         let timesheet = &self.get_timesheet()?;
         let weekly_hours = timesheet
-            .weekly_hours()
+            .weekly_hours(on)
             .iter()
             .map(|hours| hours.cell())
             .collect::<Vec<_>>();

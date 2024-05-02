@@ -105,9 +105,8 @@ impl Timesheet {
         total_time
     }
 
-    pub fn weekly_hours(&self) -> Vec<String> {
-        let now = Local::now();
-        let today = now.date_naive();
+    pub fn weekly_hours(&self, on: Option<chrono::NaiveDate>) -> Vec<String> {
+        let today = on.unwrap_or(Local::now().date_naive());
         let one_day = Days::new(1);
 
         let monday = closest_prev_monday(today);
